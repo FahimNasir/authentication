@@ -7,12 +7,15 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { JwtService } from '@nestjs/jwt';
 import { SignOutDto } from './dto/sign-out.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { MailService } from 'src/mail/mail.service';
+import { VerifyForgotPasswordTokenDto } from './dto/verify-fp-token.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly db: DatabaseService,
     private readonly jwt: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   private async hashPassword(password: string): Promise<string> {
@@ -26,6 +29,13 @@ export class AuthService {
     hashedPassword: string,
   ): Promise<boolean> {
     return bcrypt.compare(plainTextPassword, hashedPassword);
+  }
+
+  private generateRandom6DigitNumber() {
+    // Generate a random number between 100,000 and 999,999
+    const randomNumber = Math.floor(Math.random() * 900000) + 100000;
+    // Convert the number to a string and return it
+    return randomNumber.toString();
   }
 
   public async login(user: LoginDto): Promise<ApiResponseDto> {
@@ -164,7 +174,79 @@ export class AuthService {
       );
     }
 
-    // Generate a token for that email address with isVerified = false;
+    const token = this.generateRandom6DigitNumber();
+
+    const userToken = await this.db.userToken.findFirst({
+      where: { isVerified: false, emailAddress },
+    });
+
+    if (userToken) {
+      await this.db.userToken.update({
+        data: { token },
+        where: { id: userToken.id },
+      });
+    } else {
+      await this.db.userToken.create({
+        data: {
+          emailAddress,
+          isVerified: false,
+          token,
+          userId: dbUser.id,
+        },
+      });
+    }
+
     // Send it to user's email address.
+    await this.mailService.sendEmail(
+      emailAddress,
+      `Email Verification Token: Movie Booking`,
+      `Your verification code is ${token}`,
+    );
+
+    return new ApiResponseDto(
+      { emailAddress },
+      false,
+      `Token sent over email for verification`,
+      null,
+      200,
+    );
+  }
+
+  public async verifyForgetPasswordToken(
+    user: VerifyForgotPasswordTokenDto,
+  ): Promise<ApiResponseDto> {
+    const { emailAddress, token } = user;
+
+    const dbUser = await this.db.appUser.findFirst({
+      where: { emailAddress },
+      select: { id: true },
+    });
+
+    const userToken = await this.db.userToken.findFirst({
+      where: { emailAddress, token, isVerified: false, userId: dbUser.id },
+    });
+
+    if (!userToken) {
+      return new ApiResponseDto(
+        [],
+        true,
+        `Token can't be verified by provided code for email: ${emailAddress}`,
+        null,
+        404,
+      );
+    }
+
+    await this.db.userToken.update({
+      data: { isVerified: true, updatedAt: new Date() },
+      where: { id: userToken.id },
+    });
+
+    return new ApiResponseDto(
+      { emailAddress },
+      false,
+      `Token verified successfully!`,
+      null,
+      200,
+    );
   }
 }

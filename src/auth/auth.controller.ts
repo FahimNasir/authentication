@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SignOutDto } from './dto/sign-out.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { VerifyForgotPasswordTokenDto } from './dto/verify-fp-token.dto';
 
 @Controller('/api/auth')
 export class AuthController {
@@ -111,6 +112,24 @@ export class AuthController {
   ): Promise<ApiResponseDto> {
     try {
       return await this.service.forgotPassword(body);
+    } catch (error) {
+      console.error(error);
+      return new ApiResponseDto(
+        [],
+        true,
+        `Something wen't wrong while making the request`,
+        error,
+        500,
+      );
+    }
+  }
+
+  @Post('/verifyFPToken')
+  public async verifyForgetPasswordToken(
+    @Body() body: VerifyForgotPasswordTokenDto,
+  ): Promise<ApiResponseDto> {
+    try {
+      return await this.service.verifyForgetPasswordToken(body);
     } catch (error) {
       console.error(error);
       return new ApiResponseDto(
