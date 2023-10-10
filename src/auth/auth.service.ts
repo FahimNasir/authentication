@@ -9,6 +9,8 @@ import { SignOutDto } from './dto/sign-out.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { MailService } from 'src/mail/mail.service';
 import { VerifyForgotPasswordTokenDto } from './dto/verify-fp-token.dto';
+import { NewPasswordDto } from './dto/new-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -54,7 +56,8 @@ export class AuthService {
     }
 
     // * If user exists, compare the password
-    if (!this.comparePasswords(password, dbUser.password)) {
+    const passwordCorrect = await this.comparePasswords(password, dbUser.password);
+    if (!passwordCorrect) {
       responseCode = 400;
       message = `Invalid password provided for ${emailAddress}`;
       return new ApiResponseDto([], true, message, null, responseCode);
@@ -62,6 +65,8 @@ export class AuthService {
 
     responseCode = 200;
     message = `User logged in successfully!`;
+
+    await this.db.appUser.update({data: {isLoggedIn: true}, where: {id: dbUser.id}});
 
     const { id, name } = dbUser;
 
@@ -248,5 +253,93 @@ export class AuthService {
       null,
       200,
     );
+  }
+
+  // * New Password (using forget password)
+  public async changePasswordFPtoken(
+    body: NewPasswordDto,
+  ): Promise<ApiResponseDto> {
+    const { emailAddress, newPassword } = body;
+
+    const dbUser = await this.db.appUser.findFirst({
+      where: { emailAddress },
+      select: { id: true },
+    });
+    if (!dbUser) {
+      return new ApiResponseDto(
+        [],
+        true,
+        'No user Found for this email',
+        null,
+        400,
+      );
+    }
+
+    const userToken = await this.db.userToken.findFirst({
+      where: { emailAddress, isVerified: true, userId: dbUser.id },
+    });
+
+    if (!userToken) {
+      return new ApiResponseDto(
+        [],
+        true,
+        'No Verification Code was used for this Email',
+        null,
+        404,
+      );
+    }
+    const hashedPassword = await this.hashPassword(newPassword);
+    const changedUser = await this.db.appUser.update({
+      data: { password: hashedPassword, updatedAt: new Date() },
+      where: { id: userToken.userId, emailAddress: userToken.emailAddress },
+    });
+    await this.db.userToken.delete({
+      where: { id: userToken.id, userId: changedUser.id },
+    });
+
+    return new ApiResponseDto(
+      { emailAddress },
+      false,
+      'Password Changed Successfully',
+      null,
+      201,
+    );
+  }
+
+
+    // * Update the existing Password (using protected route)
+  public async changePassword(body: ChangePasswordDto, userId: string ): Promise<ApiResponseDto> {
+    const { newPassword} = body;
+
+    const dbUser = await this.db.appUser.findFirst({where: { id: userId , isLoggedIn: true }});
+
+    if(!dbUser) {
+      return new ApiResponseDto([], true, `Unable to find user`, null, 404);
+    }
+
+
+    const hashedPassword = await this.hashPassword(newPassword);
+
+    await this.db.appUser.update({
+      data: { password: hashedPassword, updatedAt: new Date() },
+      where: { id: userId },
+    });
+
+    return new ApiResponseDto(
+      { emailAddress: dbUser.emailAddress },
+      false,
+      'Password Changed Successfully',
+      null,
+      201,
+    );
+
+    // * before changing the password, check the following first.
+    // * If the new and old password aren't the same. 
+    // * Generate a notification to authorize the operation via 2FA
+    // * Get the old password from them too. 
+    // * We may keep a validity for password change. 
+    // * We may utilize sending a token on user's email for changing password
+    // Log the user out.
+
   }
 }
