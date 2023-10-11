@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { MailModule } from './mail/mail.module';
 import { AuthMiddleware } from './middlewares/auth.middleware';
 
+import { APP_FILTER } from '@nestjs/core';
+
 @Module({
   imports: [AuthModule, DatabaseModule, MailModule],
   controllers: [],

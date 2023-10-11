@@ -56,7 +56,10 @@ export class AuthService {
     }
 
     // * If user exists, compare the password
-    const passwordCorrect = await this.comparePasswords(password, dbUser.password);
+    const passwordCorrect = await this.comparePasswords(
+      password,
+      dbUser.password,
+    );
     if (!passwordCorrect) {
       responseCode = 400;
       message = `Invalid password provided for ${emailAddress}`;
@@ -66,7 +69,10 @@ export class AuthService {
     responseCode = 200;
     message = `User logged in successfully!`;
 
-    await this.db.appUser.update({data: {isLoggedIn: true}, where: {id: dbUser.id}});
+    await this.db.appUser.update({
+      data: { isLoggedIn: true },
+      where: { id: dbUser.id },
+    });
 
     const { id, name } = dbUser;
 
@@ -306,17 +312,20 @@ export class AuthService {
     );
   }
 
+  // * Update the existing Password (using protected route)
+  public async changePassword(
+    body: ChangePasswordDto,
+    userId: string,
+  ): Promise<ApiResponseDto> {
+    const { newPassword } = body;
 
-    // * Update the existing Password (using protected route)
-  public async changePassword(body: ChangePasswordDto, userId: string ): Promise<ApiResponseDto> {
-    const { newPassword} = body;
+    const dbUser = await this.db.appUser.findFirst({
+      where: { id: userId, isLoggedIn: true },
+    });
 
-    const dbUser = await this.db.appUser.findFirst({where: { id: userId , isLoggedIn: true }});
-
-    if(!dbUser) {
+    if (!dbUser) {
       return new ApiResponseDto([], true, `Unable to find user`, null, 404);
     }
-
 
     const hashedPassword = await this.hashPassword(newPassword);
 
@@ -334,12 +343,11 @@ export class AuthService {
     );
 
     // * before changing the password, check the following first.
-    // * If the new and old password aren't the same. 
+    // * If the new and old password aren't the same.
     // * Generate a notification to authorize the operation via 2FA
-    // * Get the old password from them too. 
-    // * We may keep a validity for password change. 
+    // * Get the old password from them too.
+    // * We may keep a validity for password change.
     // * We may utilize sending a token on user's email for changing password
     // Log the user out.
-
   }
 }

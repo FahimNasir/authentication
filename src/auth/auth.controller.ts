@@ -2,9 +2,13 @@ import {
   Body,
   Controller,
   Post,
+  Req,
   Request,
+  Res,
   Response,
+  UseFilters,
   UseGuards,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { AuthService } from './auth.service';
@@ -23,9 +27,9 @@ export class AuthController {
 
   @Post('/login')
   public async login(
-    @Request() req,
-    @Response() res,
-    @Body() body: LoginDto,
+    @Req() req,
+    @Res() res,
+    @Body(new ValidationPipe()) body: LoginDto,
   ): Promise<ApiResponseDto> {
     try {
       const result = await this.service.login(body);
@@ -57,7 +61,7 @@ export class AuthController {
 
   @Post('/signup')
   public async signUp(
-    @Response() res,
+    @Res() res,
     @Body() body: SignUpDto,
   ): Promise<ApiResponseDto> {
     try {
@@ -93,7 +97,7 @@ export class AuthController {
 
   @Post('/signout')
   public async signout(
-    @Response() res,
+    @Res() res,
     @Body() body: SignOutDto,
   ): Promise<ApiResponseDto> {
     try {
@@ -118,7 +122,7 @@ export class AuthController {
 
   @Post('/forgotpassword')
   public async forgotPassword(
-    @Request() req,
+    @Req() req,
     @Body() body: ForgotPasswordDto,
   ): Promise<ApiResponseDto> {
     try {
@@ -153,7 +157,7 @@ export class AuthController {
     }
   }
 
-    // * New Password (using forget password)
+  // * New Password (using forget password)
   @Post('/changePasswordFPtoken')
   public async changePasswordFPtoken(
     @Body() body: NewPasswordDto,
@@ -171,35 +175,33 @@ export class AuthController {
     }
   }
 
+  // * Update the existing Password
+  @Post('/changePassword')
+  @UseGuards(AuthMiddleware)
+  public async changePassword(
+    @Req() req,
+    @Res() res,
+    @Body() body: ChangePasswordDto,
+  ): Promise<ApiResponseDto> {
+    try {
+      console.log('User', req.user);
+      const response = await this.service.changePassword(body, req.user.userId);
 
-    // * Update the existing Password 
-    @Post('/changePassword')
-    @UseGuards(AuthMiddleware)
-    public async changePassword(
-      @Request() req,
-      @Response() res,
-      @Body() body: ChangePasswordDto,
-    ): Promise<ApiResponseDto> {
-      try {
-        console.log("User", req.user);
-        const response = await this.service.changePassword(body, req.user.userId);
-
-        if(!response.isError) {
-          res.clearCookie('jwt');
-        }
-
-        return res.status(response.responseCode).send(response);
-      } catch (error) {
-        return new ApiResponseDto(
-          [],
-          true,
-          `Something wen't wrong while making the request`,
-          error,
-          500,
-        );
+      if (!response.isError) {
+        res.clearCookie('jwt');
       }
-    }
 
+      return res.status(response.responseCode).send(response);
+    } catch (error) {
+      return new ApiResponseDto(
+        [],
+        true,
+        `Something wen't wrong while making the request`,
+        error,
+        500,
+      );
+    }
+  }
 
   // @Post('/createCustomer')
   // @UseGuards(AuthMiddleware)
