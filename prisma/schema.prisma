@@ -17,6 +17,16 @@ model appUser {
     updatedAt   DateTime?     @db.Date()
 }
 
+model appUserRoles {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+    roleId String @db.ObjectId 
+    userId String @db.ObjectId 
+    isActive Boolean
+    isDeleted Boolean
+    createdAt   DateTime      @default(now())  @db.Date()
+    updatedAt   DateTime?     @db.Date()
+}
+
 model userToken {
     id String @id @default(auto()) @map("_id") @db.ObjectId
     token String 
@@ -26,3 +36,39 @@ model userToken {
     createdAt   DateTime      @default(now())  @db.Date()
     updatedAt   DateTime?     @db.Date()
 }
+
+model roles {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+    name String
+    isActive Boolean
+    isDeleted Boolean
+    createdAt   DateTime      @default(now())  @db.Date()
+    updatedAt   DateTime?     @db.Date()
+}
+
+model rolePermissions {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+    permissionId String @db.ObjectId
+    roleId String @db.ObjectId
+    isActive Boolean
+    isDeleted Boolean
+    createdAt   DateTime      @default(now())  @db.Date()
+    updatedAt   DateTime?     @db.Date()
+}
+
+model permissions {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+    name String
+    resource String
+    route String
+    method String
+    isActive Boolean
+    isDeleted Boolean
+    createdAt   DateTime      @default(now())  @db.Date()
+    updatedAt   DateTime?     @db.Date()
+}
+
+
+
+
+

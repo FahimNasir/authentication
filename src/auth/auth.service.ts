@@ -74,12 +74,24 @@ export class AuthService {
       where: { id: dbUser.id },
     });
 
+    const appUserRoles = await this.db.appUserRoles.findMany({where: {userId: dbUser.id}, select: {roleId: true}});
+
+    
+    const appUserStringArray = [];
+    appUserRoles.forEach(item => {
+      appUserStringArray.push(item);
+    });
+
+    const userPermissions = await this.db.rolePermissions.findMany({where: {roleId: {in: appUserStringArray}}});
+
     const { id, name } = dbUser;
 
     const response = {
       userId: id,
       emailAddress,
       name,
+      userPermissions,
+      appUserRoles
     };
 
     const token = this.jwt.sign(response, { secret: process.env.JWT_SECRET });

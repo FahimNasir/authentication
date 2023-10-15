@@ -60,6 +60,7 @@ export class AuthController {
     }
   }
 
+
   @Post('/signup')
   public async signUp(
     @Res() res,

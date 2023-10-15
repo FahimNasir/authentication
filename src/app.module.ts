@@ -13,6 +13,7 @@ import { APP_FILTER } from '@nestjs/core';
   providers: [JwtService],
 })
 export class AppModule implements NestModule {
+  
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(AuthMiddleware).forRoutes('api/auth/changePassword');
   }
