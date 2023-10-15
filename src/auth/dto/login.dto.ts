@@ -3,5 +3,7 @@ export class LoginDto {
   @IsEmail()
   @IsNotEmpty()
   emailAddress: string;
+
+  @IsNotEmpty()
   password: string;
 }
