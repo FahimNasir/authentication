@@ -5,7 +5,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ApiResponseDto } from './common/dto/api-response.dto';
 
 const allowedOrigins = [
-  'http://localhost:3000',
+  'http://localhost:5173',
   // Add other allowed origins if needed
 ];
 
